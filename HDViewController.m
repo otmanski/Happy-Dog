@@ -29,6 +29,9 @@
 
 @property (strong, nonatomic) NSMutableArray *allBarks;
 @property (assign, nonatomic) NSInteger todaysBarkCount;
+@property (assign, nonatomic) NSUInteger startListeningDelayMinutes;
+@property (weak, nonatomic) IBOutlet UIStepper *delayStepper;
+@property (weak, nonatomic) IBOutlet UILabel *delayLabel;
 
 @end
 
@@ -74,6 +77,13 @@
     
     [self.saveSensitivityButton setTitleColor:[UIColor cyanColor] forState:UIControlStateNormal];
     self.micSensitivitySlider.tintColor = [UIColor cyanColor];
+    
+    self.delayStepper.minimumValue = 0;
+    self.delayStepper.maximumValue = 999;
+    self.delayStepper.tintColor = [UIColor whiteColor];
+    self.delayLabel.text = [NSString stringWithFormat:@"%.0f minutes", self.delayStepper.value];
+    self.delayLabel.textColor = [UIColor whiteColor];
+    self.delayStepper.layer.borderColor = [UIColor whiteColor].CGColor;
 }
 
 - (void)fetchOldBarksFromUserDefaults {
@@ -104,12 +114,7 @@
     
     if(![HDAudioUtils sharedInstance].isRecording) {
         if([[HDSoundsCollector sharedInstance] allSounds].count) {
-            [HDAudioUtils sharedInstance].delegate = self;
-            [[HDAudioUtils sharedInstance] startRecordingForMetering];
-            
-            [self.toggleListeningButton setTitle:@"Stop Listening" forState:UIControlStateNormal];
-            [self.myRecordingsButton setEnabled:NO];
-            [self.barkHistoryButton setEnabled:NO];
+            [self performSelector:@selector(startListening) withObject:nil afterDelay:self.delayStepper.value*60];
         } else {
             [self displayNoSoundsAlert];
         }
@@ -117,13 +122,27 @@
         [[HDAudioUtils sharedInstance] stopRecording];
         
          
-        [self.toggleListeningButton setTitle:@"Start Listening" forState:UIControlStateNormal];
+        [self.toggleListeningButton setTitle:@"Start Listening in..." forState:UIControlStateNormal];
         [self.myRecordingsButton setEnabled:YES];
         [self.barkHistoryButton setEnabled:YES];
     }
 }
+
+- (IBAction)delayStepperPressed:(UIStepper *)sender {
+    self.delayLabel.text = [NSString stringWithFormat:@"%.0f minutes", self.delayStepper.value];
+}
+
 - (IBAction)saveSensitivityButtonPressed:(id)sender {
     [self saveSensitivityValue];
+}
+
+- (void)startListening {
+    [HDAudioUtils sharedInstance].delegate = self;
+    [[HDAudioUtils sharedInstance] startRecordingForMetering];
+    
+    [self.toggleListeningButton setTitle:@"Stop Listening" forState:UIControlStateNormal];
+    [self.myRecordingsButton setEnabled:NO];
+    [self.barkHistoryButton setEnabled:NO];
 }
 
 - (void)saveSensitivityValue {
